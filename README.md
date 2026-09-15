@@ -6,6 +6,7 @@
 
 - Health: https://jjajang-vs-jjamppong.fly.dev/health
 - Result: https://jjajang-vs-jjamppong.fly.dev/api/result
+- Swagger: https://jjajang-vs-jjamppong.fly.dev/docs
 
 전체 구조도는 [`ARCHITECTURE.html`](./ARCHITECTURE.html)을 브라우저로 열면 볼 수 있습니다.
 
@@ -50,6 +51,7 @@ curl http://localhost:8080/health
 
 | 엔드포인트 | 응답 |
 | --- | --- |
+| `GET /` | `200` 서비스 상태와 사용 가능한 엔드포인트 안내 |
 | `POST /api/vote` | `201` 투표 완료 / `409` 이미 투표한 `voterId` / `422` `choice` 오류·`voterId` 누락 |
 | `GET /api/result` | `200` `{"jajang":n,"jjamppong":n,"total":n}` |
 | `GET /health` | `200` `{"status":"ok"}` (DB에 실제 질의 후 응답) |
@@ -80,7 +82,7 @@ python scripts/smoke_test.py https://상대방-public-url
 | 저장소 | SQLite (WAL 모드) |
 | 패키징 | Docker (`python:3.12-slim`, non-root 실행) |
 | 배포 | Fly.io 단일 Machine + Fly Volume (region `nrt`) |
-| CI/CD | GitHub Actions — `main` push 시 테스트 후 배포 |
+| CI/CD | GitHub Actions — `main` push 시 테스트, Fly token 설정 시 자동 배포 |
 
 의존성은 `fastapi`, `uvicorn[standard]` 두 개뿐입니다. smoke 스크립트는 표준 라이브러리만 사용합니다.
 
@@ -130,6 +132,7 @@ except sqlite3.IntegrityError as error:
 
 - 고유 `voterId` 100건을 20스레드로 동시 전송 → 100건 전부 `201`, 집계 유실 0건
 - 동일 `voterId` 20건을 동시 전송 → 정확히 1건 `201`, 19건 `409`
+- 전체 로컬 테스트 → `3 passed`
 
 ---
 
@@ -144,6 +147,8 @@ DB 파일을 컨테이너 레이어가 아니라 **마운트된 영구 볼륨**�
 배포로 Machine이 교체될 때도 같은 볼륨이 다시 붙으므로 기존 표가 유지됩니다.
 
 이 동작은 테스트로도 고정해 두었습니다. 같은 DB 파일 경로로 FastAPI 애플리케이션을 두 번 생성해 프로세스 재시작을 모사하고, 재시작 후에도 이전 표가 남아 있으며 같은 `voterId`가 여전히 `409`로 거절되는지 확인합니다.
+
+운영 환경에서도 Fly Machine을 실제 재시작해 확인했습니다. 재시작 전 `2표`가 재시작 후에도 그대로 유지됐고, 재시작 전 사용한 `voterId`는 이후 요청에서도 `409`로 거절됐습니다.
 
 ---
 
@@ -167,6 +172,18 @@ fly deploy --app <고유한-app-name>
 두 값이 비어 있으면 워크플로는 테스트만 수행하고 배포 단계를 안전하게 건너뜁니다.
 
 제출용 URL은 `https://jjajang-vs-jjamppong.fly.dev`입니다. 2026-09-15에 실제 Public URL 호출과 Fly Machine 재시작 후 데이터 유지까지 검증했습니다.
+
+### 최종 검증 체크리스트
+
+- [x] `POST /api/vote` 정상 투표 `201`
+- [x] 동일 `voterId` 중복 투표 `409`
+- [x] 비정상 요청 `422`
+- [x] `GET /api/result` 실제 저장 데이터와 일치
+- [x] `GET /health` `200`
+- [x] 동시 고유 투표 100건 유실 없음
+- [x] Dockerfile 원격 빌드 및 Fly Machine 실행
+- [x] Public HTTPS URL 외부 호출
+- [x] 실제 Machine 재시작 후 데이터와 중복 방지 규칙 유지
 
 ---
 

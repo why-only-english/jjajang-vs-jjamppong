@@ -18,6 +18,7 @@
 - [x] 단위/API/동시성 테스트 작성
 - [x] Fly.io 설정과 GitHub Actions 작성
 - [x] README 초안
+- [x] README 최종 제출본 갱신
 
 ## 진행/대기
 
