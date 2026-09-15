@@ -17,6 +17,8 @@
 - 테스트 전후 choice별/전체 집계 증가량 대조
 - 실제 Fly Machine 재시작 후 Health Check, 기존 데이터 및 기존 voterId 중복 차단 확인
 
+테스트는 Python 표준 라이브러리 `urllib`로 HTTP 요청을 보내고, `ThreadPoolExecutor(max_workers=20)`로 동시 요청을 생성했습니다. 테스트 직전과 직후 `/api/result`를 조회하여 HTTP 성공 건수와 choice별/전체 집계 증가량을 대조했습니다.
+
 ## ③ 테스트 결과
 
 | 테스트 | 기대 결과 | 실제 결과 | 판정 |
@@ -46,23 +48,29 @@
 ## ④ 발견한 문제
 
 - 요구사항 범위에서 재현 가능한 기능·동시성·정합성 문제를 발견하지 못했습니다.
-- 참고 사항: 유휴 시 Fly Machine이 정지하도록 설정되어 있어 첫 요청에는 콜드 스타트 지연이 생길 수 있습니다. 요청은 실패하지 않고 정상 처리됐습니다.
+- 참고 사항: 유휴 시 Fly Machine이 정지하도록 설정되어 있어 첫 요청에는 콜드 스타트 지연이 생길 수 있습니다. 이는 설정상 예상되는 운영 특성이며, 이번 테스트에서는 요청 실패로 재현되지 않았습니다.
 
 ## ⑤ 원인 추정 및 개선 방법
 
-문제가 발견되지 않았으므로 현재 정합성이 유지된 이유를 기록합니다.
+### 확인한 사실
 
 - `voter_id`가 SQLite PRIMARY KEY이므로 중복 판정이 DB에서 원자적으로 처리됩니다.
 - WAL과 10초 busy timeout이 짧게 겹치는 쓰기 요청을 처리합니다.
 - 집계를 별도 카운터에 저장하지 않고 원본 투표 행에서 계산하므로 성공한 투표 수와 결과가 어긋날 여지가 작습니다.
 - DB 파일이 Fly Volume `/data`에 있어 Machine 재시작 후에도 데이터와 중복 방지 기준이 유지됩니다.
 
+### 원인 추정
+
+동일 voterId 동시 20건 중 정확히 1건만 성공한 결과는 PRIMARY KEY 제약이 경쟁 요청을 DB 수준에서 직렬화한 결과로 판단합니다. 성공 103건과 집계 증가량 103건이 일치한 것은 별도 카운터 없이 원본 행을 직접 집계하는 방식과 짧은 트랜잭션의 영향으로 추정합니다.
+
+### 개선 방법
+
 트래픽과 인스턴스 수가 커진다면 SQLite 단일 Volume 대신 PostgreSQL로 전환하고, `voter_id` UNIQUE 제약과 트랜잭션은 그대로 유지하는 방식이 적절합니다.
 
 ## 재실행 방법
 
 ```bash
-python scripts/session2_test.py https://jjajang-vs-jjamppong.fly.dev
+python session2_test.py https://jjajang-vs-jjamppong.fly.dev
 ```
 
 각 실행은 임의 run ID를 voterId 앞에 붙이므로 반복 실행해도 이전 테스트 데이터와 충돌하지 않습니다.
