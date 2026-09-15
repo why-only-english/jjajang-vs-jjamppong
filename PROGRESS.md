@@ -24,7 +24,8 @@
 - [x] 로컬 Python 테스트 실행 (2 tests passed, 동시 요청 포함)
 - [x] 애플리케이션 재생성 후 데이터/중복 규칙 유지 테스트 추가
 - [ ] Docker 빌드/재시작 영속성 검증 (현재 PC Docker 확인 필요)
-- [ ] Git 저장소 생성 및 GitHub push
+- [x] Git 저장소 생성 및 GitHub remote 연결
+- [ ] GitHub `main` push
 - [ ] Fly 앱/Volume 생성 및 최초 배포
 - [ ] Public URL 외부 호출 검증
 - [x] Session 2 상호 API 테스트용 smoke script 작성
@@ -35,7 +36,8 @@
 - 동시 고유 voterId 100건: 100건 성공, 집계 유실 없음
 - 동일 voterId 동시 20건: 1건 성공/19건 409
 - 이 PC에서 확인되지 않은 명령: `docker`, `gh`, `flyctl`
-- Git 저장소 `main` 브랜치 초기화 완료 (아직 remote/commit 없음)
+- GitHub 저장소: https://github.com/why-only-english/jjajang-vs-jjamppong
+- 로컬 초기 커밋: `49d46b8 feat: implement persistent voting API`
 
 ## 사용자에게 필요한 정보
 
