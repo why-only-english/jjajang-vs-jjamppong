@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>짜장면 vs 짬뽕 투표 API — 아키텍처</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#15181d; --muted:#5d6672;
+    --line:#d9dee5; --line-strong:#aab3bf;
+    --accent:#2f6fd0; --accent-soft:#e8f0fc;
+    --green:#2e7d55; --green-soft:#e4f3ea;
+    --amber:#9a6a12; --amber-soft:#fbf1dc;
+    --violet:#6a4bbd; --violet-soft:#eeeaf9;
+    --red:#b03a3a; --red-soft:#fae9e9;
+    --code-bg:#f1f3f6;
+    --shadow:0 1px 2px rgba(20,25,35,.06), 0 6px 20px rgba(20,25,35,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1216; --panel:#171b21; --ink:#e7ebf0; --muted:#98a2b0;
+      --line:#2a313a; --line-strong:#3d4652;
+      --accent:#6aa3f0; --accent-soft:#18263c;
+      --green:#6fcf97; --green-soft:#16281f;
+      --amber:#e0b060; --amber-soft:#2b2317;
+      --violet:#a08ee8; --violet-soft:#221d33;
+      --red:#e08585; --red-soft:#2e1b1b;
+      --code-bg:#11151a;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1216; --panel:#171b21; --ink:#e7ebf0; --muted:#98a2b0;
+    --line:#2a313a; --line-strong:#3d4652;
+    --accent:#6aa3f0; --accent-soft:#18263c;
+    --green:#6fcf97; --green-soft:#16281f;
+    --amber:#e0b060; --amber-soft:#2b2317;
+    --violet:#a08ee8; --violet-soft:#221d33;
+    --red:#e08585; --red-soft:#2e1b1b;
+    --code-bg:#11151a;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  html{color-scheme:light dark}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:40px 24px 80px}
+  header.top{border-bottom:1px solid var(--line); padding-bottom:22px; margin-bottom:34px}
+  .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  h1{font-size:30px; line-height:1.25; margin:8px 0 10px; letter-spacing:-.01em}
+  .sub{color:var(--muted); margin:0; max-width:70ch}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px}
+  .chip{
+    font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px;
+    background:var(--accent-soft); color:var(--accent); border:1px solid transparent;
+  }
+  .chip.g{background:var(--green-soft); color:var(--green)}
+  .chip.a{background:var(--amber-soft); color:var(--amber)}
+  .chip.v{background:var(--violet-soft); color:var(--violet)}
+
+  section{margin:0 0 44px}
+  h2{font-size:19px; margin:0 0 4px; letter-spacing:-.005em}
+  h2 .num{color:var(--muted); font-weight:600; margin-right:8px; font-variant-numeric:tabular-nums}
+  .lede{color:var(--muted); margin:0 0 18px; max-width:78ch}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); padding:22px; overflow-x:auto;
+  }
+  svg{display:block; max-width:100%; height:auto; margin:0 auto}
+  svg text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",Roboto,Arial,sans-serif}
+
+  .grid{display:grid; gap:14px}
+  @media(min-width:760px){ .grid.c2{grid-template-columns:1fr 1fr} .grid.c3{grid-template-columns:repeat(3,1fr)} }
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:16px 18px; box-shadow:var(--shadow)}
+  .card h3{margin:0 0 6px; font-size:14px; letter-spacing:.02em}
+  .card p{margin:0; color:var(--muted); font-size:13.5px}
+  .card .tag{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:8px}
+  .card.g .tag{color:var(--green)} .card.a .tag{color:var(--amber)} .card.v .tag{color:var(--violet)}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700}
+  tbody tr:last-child td{border-bottom:none}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",monospace; font-size:.92em}
+  td code{background:var(--code-bg); padding:1px 6px; border-radius:5px}
+  .st{font-weight:700; font-variant-numeric:tabular-nums}
+  .st-201{color:var(--green)} .st-409{color:var(--amber)} .st-422{color:var(--red)} .st-200{color:var(--accent)}
+
+  ul.notes{margin:0; padding-left:20px; color:var(--muted); font-size:13.5px}
+  ul.notes li{margin:5px 0}
+  ul.notes b{color:var(--ink); font-weight:650}
+
+  .foot{border-top:1px solid var(--line); padding-top:18px; color:var(--muted); font-size:12.5px; line-height:1.9}
+  .legend{display:flex; flex-wrap:wrap; gap:16px; margin-top:14px; font-size:12px; color:var(--muted)}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .swatch{width:11px; height:11px; border-radius:3px; display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Architecture Overview</div>
+  <h1>짜장면 vs 짬뽕 투표 API</h1>
+  <p class="sub">FastAPI + SQLite 단일 프로세스로 <b>중복 투표 원자적 차단</b>과 <b>재시작 후 데이터 영속성</b>을 보장하는 최소 운영형 백엔드. Docker 이미지 하나를 Fly.io 단일 Machine에 올리고, DB 파일은 영구 볼륨 <code>/data</code>에 둔다.</p>
+  <div class="meta">
+    <span class="chip">Python 3.12</span>
+    <span class="chip">FastAPI 0.116</span>
+    <span class="chip">Uvicorn 0.35 · workers=1</span>
+    <span class="chip g">SQLite · WAL</span>
+    <span class="chip a">Docker</span>
+    <span class="chip v">Fly.io (nrt)</span>
+    <span class="chip v">GitHub Actions</span>
+  </div>
+</header>
+
+<!-- ============ 1. 시스템 구성 ============ -->
+<section>
+  <h2><span class="num">01</span>시스템 구성</h2>
+  <p class="lede">클라이언트 → Fly 엣지(HTTPS 강제) → 단일 Machine 안의 Uvicorn 프로세스 → 같은 프로세스 메모리의 <code>VoteStore</code> → 마운트된 볼륨 위 SQLite 파일. 네트워크 홉이 하나뿐이라 정합성 경계가 SQLite 파일 하나로 수렴한다.</p>
+  <div class="panel">
+  <svg viewBox="0 0 1000 470" role="img" aria-label="시스템 구성도">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+      </marker>
+      <marker id="ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+      </marker>
+      <marker id="ar-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--green)"/>
+      </marker>
+      <marker id="ar-v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--violet)"/>
+      </marker>
+    </defs>
+
+    <!-- clients -->
+    <rect x="24" y="120" width="150" height="150" rx="10" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="99" y="148" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">클라이언트</text>
+    <text x="99" y="176" text-anchor="middle" font-size="12" fill="var(--muted)">curl / 브라우저</text>
+    <text x="99" y="196" text-anchor="middle" font-size="12" fill="var(--muted)">평가자 채점</text>
+    <text x="99" y="216" text-anchor="middle" font-size="12" fill="var(--muted)">다른 지원자 API</text>
+    <rect x="34" y="230" width="130" height="24" rx="6" fill="var(--violet-soft)"/>
+    <text x="99" y="246" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--violet)" class="mono">smoke_test.py</text>
+
+    <!-- fly platform boundary -->
+    <rect x="236" y="42" width="530" height="386" rx="14" fill="none" stroke="var(--violet)" stroke-dasharray="6 5" opacity=".85"/>
+    <text x="252" y="66" font-size="11.5" font-weight="700" fill="var(--violet)" letter-spacing=".08em">FLY.IO · region nrt</text>
+
+    <!-- edge -->
+    <rect x="262" y="84" width="200" height="74" rx="9" fill="var(--violet-soft)" stroke="var(--violet)"/>
+    <text x="362" y="110" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Fly Proxy / 엣지</text>
+    <text x="362" y="130" text-anchor="middle" font-size="11.5" fill="var(--muted)">force_https = true</text>
+    <text x="362" y="147" text-anchor="middle" font-size="11.5" fill="var(--muted)">auto start / stop machines</text>
+
+    <!-- machine -->
+    <rect x="262" y="186" width="478" height="216" rx="11" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="278" y="209" font-size="11" font-weight="700" fill="var(--muted)" letter-spacing=".06em">MACHINE · shared-cpu 1x · 256MB · min_machines=0</text>
+
+    <!-- container -->
+    <rect x="278" y="222" width="290" height="164" rx="9" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="292" y="242" font-size="10.5" font-weight="700" fill="var(--accent)" letter-spacing=".05em">CONTAINER · python:3.12-slim · USER app</text>
+
+    <rect x="292" y="252" width="262" height="50" rx="7" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="423" y="272" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">Uvicorn · :8080 · workers = 1</text>
+    <text x="423" y="290" text-anchor="middle" font-size="11.5" fill="var(--muted)">ASGI 서버 (단일 이벤트 루프)</text>
+
+    <rect x="292" y="312" width="262" height="60" rx="7" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="423" y="332" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">FastAPI app (app.main)</text>
+    <text x="423" y="350" text-anchor="middle" font-size="11.5" fill="var(--muted)">create_app() → 라우터 + lifespan</text>
+    <text x="423" y="366" text-anchor="middle" font-size="11.5" fill="var(--muted)">VoteStore 인스턴스 보유</text>
+
+    <!-- volume -->
+    <rect x="596" y="240" width="128" height="128" rx="9" fill="var(--green-soft)" stroke="var(--green)"/>
+    <text x="660" y="264" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">Fly Volume</text>
+    <text x="660" y="282" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">votes_data → /data</text>
+    <ellipse cx="660" cy="306" rx="36" ry="8" fill="var(--panel)" stroke="var(--green)"/>
+    <path d="M624,306 v22 a36,8 0 0 0 72,0 v-22" fill="var(--panel)" stroke="var(--green)"/>
+    <text x="660" y="322" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--green)" class="mono">votes.db</text>
+    <text x="660" y="354" text-anchor="middle" font-size="10.5" fill="var(--muted)">WAL · 1GB</text>
+
+    <!-- CI -->
+    <rect x="806" y="120" width="168" height="150" rx="10" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="890" y="146" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">GitHub Actions</text>
+    <text x="890" y="170" text-anchor="middle" font-size="11.5" fill="var(--muted)">push → main</text>
+    <rect x="822" y="182" width="136" height="24" rx="6" fill="var(--green-soft)"/>
+    <text x="890" y="198" text-anchor="middle" font-size="11" font-weight="700" fill="var(--green)" class="mono">pytest -q</text>
+    <rect x="822" y="212" width="136" height="24" rx="6" fill="var(--violet-soft)"/>
+    <text x="890" y="228" text-anchor="middle" font-size="11" font-weight="700" fill="var(--violet)" class="mono">flyctl deploy</text>
+    <text x="890" y="256" text-anchor="middle" font-size="10.5" fill="var(--muted)">토큰 없으면 배포 skip</text>
+
+    <!-- arrows -->
+    <line x1="176" y1="182" x2="258" y2="140" stroke="var(--accent)" stroke-width="1.6" marker-end="url(#ar-a)"/>
+    <text x="192" y="150" font-size="10.5" font-weight="700" fill="var(--accent)">HTTPS</text>
+    <line x1="362" y1="160" x2="362" y2="218" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="370" y="184" font-size="10.5" fill="var(--muted)">:8080</text>
+    <line x1="423" y1="304" x2="423" y2="308" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="558" y1="342" x2="592" y2="330" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar-g)"/>
+    <text x="556" y="368" font-size="10.5" font-weight="700" fill="var(--green)">sqlite3</text>
+    <line x1="802" y1="198" x2="748" y2="232" stroke="var(--violet)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#ar-v)"/>
+
+    <text x="500" y="452" text-anchor="middle" font-size="11.5" fill="var(--muted)">단일 Machine · 단일 worker · 단일 DB 파일 → 수평 확장 대신 정합성 단순화를 선택</text>
+  </svg>
+  </div>
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--accent)"></i>애플리케이션 런타임</span>
+    <span><i class="swatch" style="background:var(--green)"></i>영속 저장소</span>
+    <span><i class="swatch" style="background:var(--violet)"></i>플랫폼 / CI</span>
+  </div>
+</section>
+
+<!-- ============ 2. 코드 레이어 ============ -->
+<section>
+  <h2><span class="num">02</span>코드 레이어 — <span class="mono">app/main.py</span> 한 파일</h2>
+  <p class="lede">계층이 얇다. Pydantic 모델이 경계에서 검증하고, 라우트 함수는 위임만 하며, <code>VoteStore</code>가 SQLite 접근을 전부 감싼다. DB 경로가 <code>create_app(database_path)</code> 인자로 주입되므로 테스트는 <code>tmp_path</code>로 완전히 격리된다.</p>
+  <div class="panel">
+  <svg viewBox="0 0 1000 400" role="img" aria-label="코드 레이어 구조">
+    <defs>
+      <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+      </marker>
+      <marker id="ar2g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--green)"/>
+      </marker>
+    </defs>
+
+    <!-- layer 1: schema -->
+    <rect x="24" y="34" width="256" height="150" rx="10" fill="var(--amber-soft)" stroke="var(--amber)"/>
+    <text x="40" y="56" font-size="11" font-weight="700" fill="var(--amber)" letter-spacing=".07em">SCHEMA · 검증 경계</text>
+    <rect x="40" y="68" width="224" height="54" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="54" y="88" font-size="12.5" font-weight="700" fill="var(--ink)" class="mono">VoteRequest</text>
+    <text x="54" y="104" font-size="10.5" fill="var(--muted)" class="mono">choice: Literal[jajang|jjamppong]</text>
+    <text x="54" y="117" font-size="10.5" fill="var(--muted)" class="mono">voterId: str(1..128), 공백 불가</text>
+    <rect x="40" y="130" width="224" height="44" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="54" y="149" font-size="12.5" font-weight="700" fill="var(--ink)" class="mono">VoteResult</text>
+    <text x="54" y="165" font-size="10.5" fill="var(--muted)" class="mono">jajang / jjamppong / total : int</text>
+
+    <!-- 경로 주입 -->
+    <rect x="24" y="218" width="256" height="90" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-dasharray="5 4"/>
+    <text x="40" y="240" font-size="11" font-weight="700" fill="var(--muted)" letter-spacing=".07em">DB 경로 주입 우선순위</text>
+    <text x="40" y="261" font-size="11" fill="var(--ink)" class="mono">① create_app(database_path)</text>
+    <text x="40" y="278" font-size="11" fill="var(--ink)" class="mono">② env DATABASE_PATH</text>
+    <text x="40" y="295" font-size="11" fill="var(--ink)" class="mono">③ 기본값 /data/votes.db</text>
+
+    <!-- layer 2: app factory + routes -->
+    <rect x="316" y="34" width="296" height="274" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="332" y="56" font-size="11" font-weight="700" fill="var(--accent)" letter-spacing=".07em">APP FACTORY · create_app()</text>
+    <rect x="332" y="68" width="264" height="48" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="346" y="87" font-size="12" font-weight="700" fill="var(--ink)" class="mono">lifespan</text>
+    <text x="346" y="105" font-size="10.5" fill="var(--muted)">기동 시 store.initialize() — 디렉터리·테이블 보장</text>
+
+    <text x="332" y="138" font-size="11" font-weight="700" fill="var(--accent)" letter-spacing=".07em">ROUTES</text>
+    <rect x="332" y="146" width="264" height="44" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="346" y="165" font-size="12" font-weight="700" fill="var(--ink)" class="mono">POST /api/vote</text>
+    <text x="346" y="181" font-size="10.5" fill="var(--muted)">→ store.vote(voterId, choice) · 201</text>
+    <rect x="332" y="198" width="264" height="44" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="346" y="217" font-size="12" font-weight="700" fill="var(--ink)" class="mono">GET /api/result</text>
+    <text x="346" y="233" font-size="10.5" fill="var(--muted)">→ store.result() · response_model 고정</text>
+    <rect x="332" y="250" width="264" height="44" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="346" y="269" font-size="12" font-weight="700" fill="var(--ink)" class="mono">GET /health</text>
+    <text x="346" y="285" font-size="10.5" fill="var(--muted)">→ store.check() · DB에 실제 질의</text>
+
+    <!-- layer 3: store -->
+    <rect x="648" y="34" width="328" height="274" rx="10" fill="var(--green-soft)" stroke="var(--green)"/>
+    <text x="664" y="56" font-size="11" font-weight="700" fill="var(--green)" letter-spacing=".07em">STORE · VoteStore (SQLite 캡슐화)</text>
+    <rect x="664" y="68" width="296" height="44" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="678" y="86" font-size="12" font-weight="700" fill="var(--ink)" class="mono">connect()</text>
+    <text x="678" y="103" font-size="10.5" fill="var(--muted)">요청마다 새 연결 · timeout 10s · busy_timeout 10000</text>
+    <rect x="664" y="120" width="296" height="44" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="678" y="138" font-size="12" font-weight="700" fill="var(--ink)" class="mono">initialize()</text>
+    <text x="678" y="155" font-size="10.5" fill="var(--muted)">mkdir -p · journal_mode=WAL · CREATE TABLE IF NOT EXISTS</text>
+    <rect x="664" y="172" width="296" height="54" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="678" y="190" font-size="12" font-weight="700" fill="var(--ink)" class="mono">vote()</text>
+    <text x="678" y="206" font-size="10.5" fill="var(--muted)">단일 INSERT 트랜잭션 (선행 조회 없음)</text>
+    <text x="678" y="220" font-size="10.5" fill="var(--amber)">IntegrityError(votes.voter_id) → HTTP 409</text>
+    <rect x="664" y="234" width="296" height="38" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="678" y="252" font-size="12" font-weight="700" fill="var(--ink)" class="mono">result()</text>
+    <text x="678" y="266" font-size="10.5" fill="var(--muted)">COUNT(*) FILTER — 한 번의 스캔으로 3개 집계</text>
+    <rect x="664" y="280" width="296" height="22" rx="7" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="678" y="295" font-size="10.5" fill="var(--ink)"><tspan font-weight="700" class="mono">check()</tspan> — health용 SELECT 1</text>
+
+    <!-- table -->
+    <rect x="648" y="326" width="328" height="62" rx="9" fill="var(--panel)" stroke="var(--green)"/>
+    <text x="664" y="346" font-size="11.5" font-weight="700" fill="var(--green)" class="mono">TABLE votes</text>
+    <text x="664" y="363" font-size="10.5" fill="var(--muted)" class="mono">voter_id TEXT PRIMARY KEY ← 중복 차단의 원천</text>
+    <text x="664" y="378" font-size="10.5" fill="var(--muted)" class="mono">choice TEXT CHECK(jajang|jjamppong) · created_at TEXT</text>
+
+    <!-- arrows -->
+    <line x1="284" y1="118" x2="312" y2="118" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar2)"/>
+    <line x1="616" y1="170" x2="644" y2="170" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar2)"/>
+    <line x1="812" y1="312" x2="812" y2="322" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar2g)"/>
+    <path d="M280,262 C298,262 298,160 312,160" fill="none" stroke="var(--line-strong)" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ar2)"/>
+  </svg>
+  </div>
+</section>
+
+<!-- ============ 3. 요청 흐름 ============ -->
+<section>
+  <h2><span class="num">03</span>요청 흐름과 동시성 — 중복 투표가 새지 않는 이유</h2>
+  <p class="lede">애플리케이션 레벨에서 "이미 투표했나?"를 <b>조회하지 않는다</b>. 조회 후 삽입은 두 문장 사이에 경쟁 구간이 생기지만, 여기서는 곧바로 INSERT를 던지고 SQLite PRIMARY KEY 제약이 거부한 것을 409로 번역한다. 유일성 판정이 DB 한 지점에서 원자적으로 끝난다.</p>
+  <div class="panel">
+  <svg viewBox="0 0 1000 340" role="img" aria-label="POST /api/vote 요청 흐름">
+    <defs>
+      <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+      </marker>
+      <marker id="ar3g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--green)"/>
+      </marker>
+      <marker id="ar3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--amber)"/>
+      </marker>
+      <marker id="ar3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--red)"/>
+      </marker>
+    </defs>
+
+    <text x="24" y="26" font-size="11" font-weight="700" fill="var(--muted)" letter-spacing=".06em" class="mono">POST /api/vote { "choice", "voterId" }</text>
+
+    <!-- step 1 -->
+    <rect x="24" y="44" width="174" height="70" rx="9" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="111" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">1 · Pydantic 검증</text>
+    <text x="111" y="88" text-anchor="middle" font-size="10.5" fill="var(--muted)">choice는 Literal 두 값만</text>
+    <text x="111" y="103" text-anchor="middle" font-size="10.5" fill="var(--muted)">voterId 길이·공백 패턴</text>
+
+    <!-- 422 -->
+    <rect x="24" y="152" width="174" height="54" rx="9" fill="var(--red-soft)" stroke="var(--red)"/>
+    <text x="111" y="175" text-anchor="middle" font-size="13" font-weight="700" fill="var(--red)">422 Unprocessable</text>
+    <text x="111" y="193" text-anchor="middle" font-size="10.5" fill="var(--muted)">누락 · 오타 · 공백 voterId</text>
+    <line x1="111" y1="118" x2="111" y2="148" stroke="var(--red)" stroke-width="1.6" marker-end="url(#ar3r)"/>
+    <text x="120" y="139" font-size="10.5" fill="var(--red)">실패</text>
+
+    <!-- step 2 -->
+    <rect x="248" y="44" width="200" height="70" rx="9" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="348" y="70" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">2 · store.vote()</text>
+    <text x="348" y="88" text-anchor="middle" font-size="10.5" fill="var(--muted)">새 연결 · busy_timeout 10s</text>
+    <text x="348" y="103" text-anchor="middle" font-size="10.5" fill="var(--muted)">선행 SELECT 없음</text>
+    <line x1="202" y1="79" x2="244" y2="79" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar3)"/>
+
+    <!-- step 3 -->
+    <rect x="502" y="34" width="216" height="92" rx="9" fill="var(--green-soft)" stroke="var(--green)"/>
+    <text x="610" y="58" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">3 · INSERT (원자적)</text>
+    <text x="610" y="78" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">INSERT INTO votes</text>
+    <text x="610" y="92" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">(voter_id, choice) VALUES (?,?)</text>
+    <text x="610" y="112" text-anchor="middle" font-size="10.5" fill="var(--green)">PK 제약이 유일성을 판정</text>
+    <line x1="452" y1="79" x2="498" y2="79" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar3)"/>
+
+    <!-- outcomes -->
+    <rect x="782" y="26" width="194" height="60" rx="9" fill="var(--green-soft)" stroke="var(--green)"/>
+    <text x="879" y="50" text-anchor="middle" font-size="13" font-weight="700" fill="var(--green)">201 Created</text>
+    <text x="879" y="69" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">{"status":"accepted"}</text>
+    <line x1="722" y1="66" x2="778" y2="56" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar3g)"/>
+
+    <rect x="782" y="104" width="194" height="70" rx="9" fill="var(--amber-soft)" stroke="var(--amber)"/>
+    <text x="879" y="128" text-anchor="middle" font-size="13" font-weight="700" fill="var(--amber)">409 Conflict</text>
+    <text x="879" y="146" text-anchor="middle" font-size="10.5" fill="var(--muted)">IntegrityError 포착 후 번역</text>
+    <text x="879" y="162" text-anchor="middle" font-size="10" fill="var(--muted)" class="mono">"voterId has already voted"</text>
+    <line x1="722" y1="98" x2="778" y2="124" stroke="var(--amber)" stroke-width="1.6" marker-end="url(#ar3a)"/>
+
+    <!-- concurrency band -->
+    <rect x="24" y="230" width="952" height="92" rx="10" fill="var(--panel)" stroke="var(--line)"/>
+    <text x="44" y="253" font-size="11" font-weight="700" fill="var(--muted)" letter-spacing=".07em">동시성 방어 3단</text>
+    <rect x="44" y="262" width="290" height="46" rx="7" fill="var(--accent-soft)"/>
+    <text x="60" y="281" font-size="12" font-weight="700" fill="var(--ink)">WAL 저널</text>
+    <text x="60" y="298" font-size="10.5" fill="var(--muted)">읽기가 쓰기를 막지 않음 → result가 대기하지 않음</text>
+    <rect x="352" y="262" width="290" height="46" rx="7" fill="var(--accent-soft)"/>
+    <text x="368" y="281" font-size="12" font-weight="700" fill="var(--ink)">busy_timeout 10초</text>
+    <text x="368" y="298" font-size="10.5" fill="var(--muted)">쓰기 락 경합 시 즉시 실패 대신 재시도 대기</text>
+    <rect x="660" y="262" width="290" height="46" rx="7" fill="var(--accent-soft)"/>
+    <text x="676" y="281" font-size="12" font-weight="700" fill="var(--ink)">짧은 트랜잭션 · workers=1</text>
+    <text x="676" y="298" font-size="10.5" fill="var(--muted)">단일 INSERT만 잠금 → 락 보유 시간 최소</text>
+  </svg>
+  </div>
+  <div class="grid c3" style="margin-top:14px">
+    <div class="card g"><span class="tag">테스트 통과</span><h3>고유 voterId 100건 동시</h3><p>ThreadPool 20 workers · 100건 전부 201, 집계 유실 0건.</p></div>
+    <div class="card a"><span class="tag">테스트 통과</span><h3>동일 voterId 20건 동시</h3><p>정확히 1건만 201, 나머지 19건 409. 레이스 없음.</p></div>
+    <div class="card v"><span class="tag">테스트 통과</span><h3>재시작 후 영속성</h3><p>같은 DB 파일로 앱을 다시 만들어도 이전 표와 중복 규칙이 유지됨.</p></div>
+  </div>
+</section>
+
+<!-- ============ 4. API ============ -->
+<section>
+  <h2><span class="num">04</span>API 계약</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:26%">엔드포인트</th><th style="width:32%">요청</th><th style="width:42%">응답</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>POST /api/vote</code></td>
+          <td><code>{"choice":"jajang|jjamppong","voterId":"user-123"}</code></td>
+          <td>
+            <span class="st st-201">201</span> <code>{"status":"accepted"}</code><br>
+            <span class="st st-409">409</span> 이미 투표한 voterId<br>
+            <span class="st st-422">422</span> choice 오류 · voterId 누락/공백/129자 이상
+          </td>
+        </tr>
+        <tr>
+          <td><code>GET /api/result</code></td>
+          <td>없음</td>
+          <td><span class="st st-200">200</span> <code>{"jajang":n,"jjamppong":n,"total":n}</code> — <code>VoteResult</code>로 응답 스키마 고정</td>
+        </tr>
+        <tr>
+          <td><code>GET /health</code></td>
+          <td>없음</td>
+          <td><span class="st st-200">200</span> <code>{"status":"ok"}</code> — DB에 <code>SELECT 1</code>을 실제로 던진 뒤 응답 (프로세스 생존만 보는 얕은 체크가 아님)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 5. 배포 파이프라인 ============ -->
+<section>
+  <h2><span class="num">05</span>빌드 · 배포 파이프라인</h2>
+  <p class="lede">같은 <code>Dockerfile</code>이 로컬(compose)과 운영(Fly)에서 그대로 쓰인다. 차이는 <code>/data</code>에 무엇을 마운트하느냐뿐 — Docker named volume이냐 Fly Volume이냐.</p>
+  <div class="panel">
+  <svg viewBox="0 0 1000 300" role="img" aria-label="배포 파이프라인">
+    <defs>
+      <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+      </marker>
+    </defs>
+
+    <rect x="24" y="96" width="156" height="76" rx="9" fill="var(--panel)" stroke="var(--line-strong)"/>
+    <text x="102" y="122" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">로컬 커밋</text>
+    <text x="102" y="140" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">git push origin main</text>
+    <text x="102" y="157" text-anchor="middle" font-size="10" fill="var(--muted)">author: why-only-english</text>
+
+    <rect x="214" y="96" width="168" height="76" rx="9" fill="var(--violet-soft)" stroke="var(--violet)"/>
+    <text x="298" y="120" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">GitHub Actions</text>
+    <text x="298" y="138" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">deploy.yml</text>
+    <text x="298" y="156" text-anchor="middle" font-size="10" fill="var(--muted)">concurrency: production-deploy</text>
+
+    <rect x="416" y="56" width="168" height="62" rx="9" fill="var(--green-soft)" stroke="var(--green)"/>
+    <text x="500" y="80" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">setup-python 3.12</text>
+    <text x="500" y="99" text-anchor="middle" font-size="10.5" fill="var(--muted)">pip 캐시 → <tspan class="mono">pytest -q</tspan></text>
+
+    <rect x="416" y="148" width="168" height="80" rx="9" fill="var(--panel)" stroke="var(--line-strong)" stroke-dasharray="5 4"/>
+    <text x="500" y="171" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">배포 게이트</text>
+    <text x="500" y="190" text-anchor="middle" font-size="10" fill="var(--muted)" class="mono">vars.FLY_APP_NAME</text>
+    <text x="500" y="205" text-anchor="middle" font-size="10" fill="var(--muted)" class="mono">secrets.FLY_API_TOKEN</text>
+    <text x="500" y="221" text-anchor="middle" font-size="10" fill="var(--amber)">둘 중 하나라도 비면 배포 skip</text>
+
+    <rect x="620" y="96" width="168" height="76" rx="9" fill="var(--violet-soft)" stroke="var(--violet)"/>
+    <text x="704" y="120" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">flyctl deploy</text>
+    <text x="704" y="139" text-anchor="middle" font-size="10.5" fill="var(--muted)" class="mono">--remote-only</text>
+    <text x="704" y="156" text-anchor="middle" font-size="10" fill="var(--muted)">Dockerfile 원격 빌드</text>
+
+    <rect x="822" y="96" width="154" height="76" rx="9" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="899" y="120" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">Machine 교체</text>
+    <text x="899" y="139" text-anchor="middle" font-size="10.5" fill="var(--muted)">볼륨 재부착 → 표 유지</text>
+    <text x="899" y="156" text-anchor="middle" font-size="10" fill="var(--muted)">Public URL 그대로</text>
+
+    <line x1="184" y1="134" x2="210" y2="134" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar4)"/>
+    <line x1="386" y1="120" x2="412" y2="96" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar4)"/>
+    <line x1="386" y1="150" x2="412" y2="176" stroke="var(--line-strong)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#ar4)"/>
+    <line x1="588" y1="102" x2="616" y2="124" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar4)"/>
+    <line x1="792" y1="134" x2="818" y2="134" stroke="var(--line-strong)" stroke-width="1.6" marker-end="url(#ar4)"/>
+
+    <text x="500" y="272" text-anchor="middle" font-size="11" fill="var(--muted)">이미지는 non-root <tspan class="mono" font-weight="700">USER app</tspan> 으로 실행되고, <tspan class="mono" font-weight="700">.dockerignore</tspan> 가 tests · .venv · *.db · PROGRESS.md 를 제외해 빌드 컨텍스트를 줄인다</text>
+  </svg>
+  </div>
+</section>
+
+<!-- ============ 6. 설계 판단 ============ -->
+<section>
+  <h2><span class="num">06</span>설계 판단과 그 대가</h2>
+  <div class="grid c2">
+    <div class="card"><span class="tag">선택</span><h3>조회 없이 INSERT → 409 번역</h3><p>"먼저 확인하고 넣기"는 두 문장 사이에 경쟁 구간이 생긴다. 유일성 판정을 PK 제약 한 곳에 몰아 애플리케이션 락 없이 원자성을 얻었다.</p></div>
+    <div class="card"><span class="tag">선택</span><h3>DB 경로 주입형 app factory</h3><p><code>create_app(path)</code> 덕분에 테스트가 <code>tmp_path</code>로 완전히 격리되고, 같은 경로로 두 번 만들어 프로세스 재시작까지 모사할 수 있다.</p></div>
+    <div class="card g"><span class="tag">선택</span><h3>SQLite + 단일 볼륨</h3><p>40분 과제 범위에서 분산 DB 없이 정합성·영속성을 동시에 만족하는 가장 적은 구성요소.</p></div>
+    <div class="card a"><span class="tag">대가</span><h3>수평 확장 불가</h3><p>DB 파일이 한 볼륨에 묶여 Machine을 늘릴 수 없고 <code>workers=1</code>도 같은 이유. 규모가 커지면 PostgreSQL의 UNIQUE 제약으로 같은 규칙을 옮기는 것이 다음 수순.</p></div>
+    <div class="card a"><span class="tag">대가</span><h3>auto_stop · min=0 콜드 스타트</h3><p>유휴 시 Machine이 정지해 첫 요청에 기동 지연이 붙는다. 비용 대신 지연을 택한 설정.</p></div>
+    <div class="card v"><span class="tag">보조 도구</span><h3>표준 라이브러리 smoke script</h3><p><code>scripts/smoke_test.py</code>는 의존성 없이 임의의 Public URL에 대해 health · 201 · 409 · 집계 증가를 한 번에 판정한다.</p></div>
+  </div>
+</section>
+
+<!-- ============ 7. 현재 상태 ============ -->
+<section>
+  <h2><span class="num">07</span>현재 상태 <span style="font-weight:400;font-size:13px;color:var(--muted)">— PROGRESS.md 기준</span></h2>
+  <div class="panel">
+    <div class="grid c2">
+      <div>
+        <h3 style="font-size:13px;margin:0 0 8px;color:var(--green)">완료</h3>
+        <ul class="notes">
+          <li>API 3개 구현 · 입력 검증 · 409 중복 처리</li>
+          <li>WAL / busy_timeout / <code>/data</code> 영속 경로</li>
+          <li>Dockerfile · compose · fly.toml · Actions 워크플로</li>
+          <li><b>pytest 통과</b> — 동시성 2종 + 재시작 영속성</li>
+          <li>GitHub 저장소 생성 및 <code>main</code> push</li>
+          <li>상호 점검용 smoke script</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size:13px;margin:0 0 8px;color:var(--amber)">대기 · 확인 필요</h3>
+        <ul class="notes">
+          <li>Docker 빌드 및 재시작 영속성 <b>실물 검증</b></li>
+          <li>Fly 앱 · Volume 생성 및 최초 배포</li>
+          <li>Public URL 외부 호출 검증</li>
+          <li>Fly 고유 앱 이름 결정 · 앱 범위 <code>FLY_API_TOKEN</code> 등록</li>
+          <li>이 PC에서 미확인 명령: <code>docker</code> · <code>gh</code> · <code>flyctl</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <b>분석 대상</b> · <span class="mono">C:\Users\문종근\Desktop\문종근\20260915\_Test</span><br>
+  근거 파일 · <span class="mono">app/main.py</span> · <span class="mono">tests/test_api.py</span> · <span class="mono">scripts/smoke_test.py</span> · <span class="mono">Dockerfile</span> · <span class="mono">compose.yaml</span> · <span class="mono">fly.toml</span> · <span class="mono">.github/workflows/deploy.yml</span> · <span class="mono">README.md</span> · <span class="mono">PROGRESS.md</span><br>
+  생성일 2026-09-15 · 저장소 <span class="mono">github.com/why-only-english/jjajang-vs-jjamppong</span>
+</div>
+
+</div>
+</body>
+</html>
