@@ -32,6 +32,8 @@
 - [x] Public URL 외부 호출 검증
 - [x] 루트 URL 안내 응답 추가 (`GET /`)
 - [x] Session 2 상호 API 테스트용 smoke script 작성
+- [x] Session 2 전체 Public API 테스트 스크립트 작성 및 실행
+- [x] Session 2 제출용 테스트 결과 보고서 작성
 
 ## 검증 기록
 
@@ -48,6 +50,9 @@
 - Public URL: https://jjajang-vs-jjamppong.fly.dev
 - Public smoke test: health/result/vote/duplicate/count 검증 모두 성공
 - 실제 Machine 재시작: 결과 `2표` 유지, 기존 voterId 재투표 `409` 확인
+- Session 2 실행 `s2-aa4ccf1db14e`: 고유 ID 100건 전부 성공, 동일 ID 20건 중 1건만 성공
+- Session 2 집계: 시작 58 → 종료 161, 성공 요청 103건과 증가량 정확히 일치
+- Session 2 재시작: Health 정상, 기존 voterId `409`; 외부 동시 요청으로 total은 163 → 165 증가
 
 ## 사용자에게 필요한 정보
 

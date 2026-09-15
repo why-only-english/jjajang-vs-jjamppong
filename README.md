@@ -70,6 +70,14 @@ curl http://localhost:8080/health
 python scripts/smoke_test.py https://상대방-public-url
 ```
 
+Session 2 전체 기능·동시성·정합성 테스트를 본 서비스에 실행하려면:
+
+```bash
+python scripts/session2_test.py https://jjajang-vs-jjamppong.fly.dev
+```
+
+실제 수행 결과와 제출용 문안은 [`SESSION2_REPORT.md`](./SESSION2_REPORT.md)에 정리했습니다.
+
 ---
 
 ## 2. 사용한 기술
