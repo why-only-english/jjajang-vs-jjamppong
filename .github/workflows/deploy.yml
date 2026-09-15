@@ -12,6 +12,9 @@ concurrency:
 jobs:
   test-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      FLY_APP_NAME: ${{ vars.FLY_APP_NAME }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,6 +24,9 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --app "${{ vars.FLY_APP_NAME }}"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Fly configuration is pending
+        if: env.FLY_APP_NAME == '' || env.FLY_API_TOKEN == ''
+        run: echo "Fly.io deployment skipped until FLY_APP_NAME and FLY_API_TOKEN are configured."
+      - name: Deploy
+        if: env.FLY_APP_NAME != '' && env.FLY_API_TOKEN != ''
+        run: flyctl deploy --remote-only --app "$FLY_APP_NAME"
