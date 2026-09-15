@@ -1,3 +1,4 @@
+app = "jjajang-vs-jjamppong"
 primary_region = "nrt"
 
 [build]

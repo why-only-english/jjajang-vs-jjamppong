@@ -2,6 +2,11 @@
 
 한 사람이 한 번만 투표할 수 있고, 재시작해도 표가 남는 최소 운영형 백엔드입니다.
 
+**현재 Public URL:** https://jjajang-vs-jjamppong.fly.dev
+
+- Health: https://jjajang-vs-jjamppong.fly.dev/health
+- Result: https://jjajang-vs-jjamppong.fly.dev/api/result
+
 전체 구조도는 [`ARCHITECTURE.html`](./ARCHITECTURE.html)을 브라우저로 열면 볼 수 있습니다.
 
 ---
@@ -161,9 +166,7 @@ fly deploy --app <고유한-app-name>
 
 두 값이 비어 있으면 워크플로는 테스트만 수행하고 배포 단계를 안전하게 건너뜁니다.
 
-제출용 URL은 `https://<app-name>.fly.dev`이고, 여기에 `/health`, `/api/result`를 붙여 확인합니다.
-
-> 현재 상태: 앱 이름과 토큰 설정 전이라 실제 배포는 대기 중입니다. 진행 상황은 `PROGRESS.md`에 기록합니다.
+제출용 URL은 `https://jjajang-vs-jjamppong.fly.dev`입니다. 2026-09-15에 실제 Public URL 호출과 Fly Machine 재시작 후 데이터 유지까지 검증했습니다.
 
 ---
 
