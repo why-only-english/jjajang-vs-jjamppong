@@ -87,6 +87,19 @@ def create_app(database_path: str | None = None) -> FastAPI:
 
     api = FastAPI(title="Jajang vs Jjamppong Vote API", lifespan=lifespan)
 
+    @api.get("/")
+    def root() -> dict[str, object]:
+        return {
+            "service": "Jajang vs Jjamppong Vote API",
+            "status": "running",
+            "endpoints": {
+                "health": "GET /health",
+                "result": "GET /api/result",
+                "vote": "POST /api/vote",
+                "docs": "GET /docs",
+            },
+        }
+
     @api.post("/api/vote", status_code=status.HTTP_201_CREATED)
     def vote(request: VoteRequest) -> dict[str, str]:
         store.vote(request.voterId, request.choice)

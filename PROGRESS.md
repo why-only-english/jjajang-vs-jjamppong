@@ -29,6 +29,7 @@
 - [x] GitHub `main` push
 - [x] Fly 앱/1GB 암호화 Volume 생성 및 최초 배포
 - [x] Public URL 외부 호출 검증
+- [x] 루트 URL 안내 응답 추가 (`GET /`)
 - [x] Session 2 상호 API 테스트용 smoke script 작성
 
 ## 검증 기록

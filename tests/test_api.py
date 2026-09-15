@@ -8,6 +8,9 @@ from app.main import create_app
 def test_vote_result_validation_and_duplicate(tmp_path):
     app = create_app(str(tmp_path / "votes.db"))
     with TestClient(app) as client:
+        root = client.get("/")
+        assert root.status_code == 200
+        assert root.json()["status"] == "running"
         assert client.get("/health").status_code == 200
         assert client.get("/api/result").json() == {
             "jajang": 0,
