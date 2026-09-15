@@ -44,5 +44,6 @@
 
 - GitHub 저장소 URL(새 저장소라면 원하는 저장소 이름과 공개/비공개 여부)
 - GitHub 인증: 이 PC에서 로그인 또는 push 가능한 자격 증명
-- Fly.io 계정/조직과 고유 앱 이름
+- [x] Fly.io 계정 생성 완료 (Personal 조직)
+- Fly.io 고유 앱 이름 결정 필요
 - 앱 범위 `FLY_API_TOKEN` (채팅에 붙이지 말고 GitHub Actions secret으로 직접 등록 권장)
