@@ -39,6 +39,7 @@
 - GitHub 저장소: https://github.com/why-only-english/jjajang-vs-jjamppong
 - 로컬 초기 커밋: `49d46b8 feat: implement persistent voting API`
 - Fly 설정 전에는 GitHub Actions가 테스트만 수행하고 배포는 안전하게 건너뜀
+- 이 저장소의 Git 작성자·push 사용자 설정을 `why-only-english`로 변경 (전역 jgmoon 설정은 유지)
 
 ## 사용자에게 필요한 정보
 
