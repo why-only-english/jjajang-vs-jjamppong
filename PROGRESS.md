@@ -25,7 +25,7 @@
 - [x] 애플리케이션 재생성 후 데이터/중복 규칙 유지 테스트 추가
 - [ ] Docker 빌드/재시작 영속성 검증 (현재 PC Docker 확인 필요)
 - [x] Git 저장소 생성 및 GitHub remote 연결
-- [ ] GitHub `main` push
+- [x] GitHub `main` push
 - [ ] Fly 앱/Volume 생성 및 최초 배포
 - [ ] Public URL 외부 호출 검증
 - [x] Session 2 상호 API 테스트용 smoke script 작성
