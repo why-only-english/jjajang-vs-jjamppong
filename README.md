@@ -78,6 +78,8 @@ python scripts/session2_test.py https://jjajang-vs-jjamppong.fly.dev
 
 실제 수행 결과와 제출용 문안은 [`SESSION2_REPORT.md`](./SESSION2_REPORT.md)에 정리했습니다.
 
+전체 Session 2 제출 산출물은 [`session2-산출물-문종근.zip`](./session2-산출물-문종근.zip)에서 받을 수 있습니다.
+
 ---
 
 ## 2. 사용한 기술
